@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# Curl for Chrome Cookies
+
+# Goto the Chrome Cookie Store
+cd "/Users/$USER/Library/Application Support/Google/Chrome/Default"
+
+# Get the Url Paramters
+URL=${1:-localhost:3000/}
+
+# port
+PORT="$(echo $URL | grep : | sed 's/.*://')"
+PORT="$(echo $PORT | sed 's/\/.*//')"
+
+# domain 
+DOMAIN="$(echo $URL | sed 's/\/.*//')"
+DOMAIN="$(echo $DOMAIN | sed 's/:.*//')"
+
+# domain and port
+DOMAIN_PORT="$(echo $URL | sed 's/\/.*//')"
+
+# url path
+HAS_PORT="$(echo $URL | grep -c ':')"
+if (("$HAS_PORT" >= "1")) ; then
+  PREFIX="$DOMAIN$PORT"
+  PREFIX="${PREFIX:${#PREFIX}-1}"
+else
+  PREFIX="$DOMAIN"
+fi
+URL_PATH="$(echo $URL | sed 's/.*'"$PREFIX"'//')"
+
+# Open the SQL Lite database and query for only localhost cookies
+sqlite3 Cookies <<SQL_ENTRY_TAG_1
+.separator |=|
+.output test_file.txt
+select name, value from cookies where host_key = "$DOMAIN";
+.exit
+SQL_ENTRY_TAG_1
+
+# Transform the SQL Lite output to a format we can pass to curl
+cat test_file.txt | sed -e 's#|=|#=#g' > cookies.txt
+tr '\n' ';' < cookies.txt > cookies2.txt
+
+# Name-Value Pairs
+cookie_data="`cat cookies2.txt`"
+
+# Get the curl parameters
+if (("$#" >= "2")) ; then
+  CURL_PARAMS="${@:2:$#}"
+else
+  CURL_PARAMS=""
+fi
+
+# Pass the cookie data and url path to curl
+PARAMS="$URL_PATH $CURL_PARAMS"
+curl -b "$cookie_data" -X GET $DOMAIN_PORT$PARAMS
+echo "CALLING: curl -b $cookie_data -X GET $DOMAIN_PORT$PARAMS"
+
+# Clean Up
+rm test_file.txt
+rm cookies.txt
+rm cookies2.txt
+
+exit 0
