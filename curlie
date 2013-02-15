@@ -1,0 +1,46 @@
+#!/bin/bash
+
+# curlie
+# curl with cookie support
+
+usage() {  
+  echo "Usage: curlie -fcsh url {curl options}"
+  echo "  -f (firefox)"
+  echo "  -c (chrome)"
+  echo "  -s (safari)"
+  echo "  -h (help)"
+  echo " Example: >./curlie -c locahost:3000/index -d \"key=value\""
+  exit
+}
+
+# check for valid params
+
+# browser
+if [ -z $1 ] ; then
+  BROWSER="-c"
+elif [ "$1" == "h" -o "$1" == "-h" ] ; then
+  usage
+else
+  BROWSER="$1"
+fi
+
+# url
+URL=${2:-localhost:3000/}
+
+# curl options
+if (("$#" >= "3")) ; then
+  CURL_PARAMS="${@:3:$#}"
+else
+  CURL_PARAMS=""
+fi
+
+# send to browser specific curl file
+
+if [ "$BROWSER" == "-c" ] ; then
+  ./churl "$URL $CURL_PARAMS" 
+elif [ "$BROWSER" == "-f" ] ; then
+  ./furl "$URL $CURL_PARAMS"
+else
+  ./surl "$URL $CURL_PARAMS"
+fi
+
